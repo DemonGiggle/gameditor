@@ -136,3 +136,95 @@ fn handle_cmd(cmd: WorkerCmd, state: &mut State, tx: &Sender<WorkerResult>) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::mpsc::channel;
+    use std::time::Duration;
+    use crate::types::{Pin, WorkerCmd, WorkerResult};
+
+    fn spawn_worker() -> (std::sync::mpsc::Sender<WorkerCmd>, std::sync::mpsc::Receiver<WorkerResult>) {
+        let (cmd_tx, cmd_rx) = channel::<WorkerCmd>();
+        let (result_tx, result_rx) = channel::<WorkerResult>();
+        std::thread::spawn(move || run(cmd_rx, result_tx));
+        (cmd_tx, result_rx)
+    }
+
+    fn recv(rx: &std::sync::mpsc::Receiver<WorkerResult>) -> WorkerResult {
+        rx.recv_timeout(Duration::from_secs(5)).expect("worker did not respond in time")
+    }
+
+    // ── Attach ────────────────────────────────────────────────────────────
+
+    #[test]
+    #[cfg(not(windows))]
+    fn attach_fails_on_non_windows() {
+        let (tx, rx) = spawn_worker();
+        tx.send(WorkerCmd::Attach(1234)).unwrap();
+        assert!(matches!(recv(&rx), WorkerResult::AttachFailed(_)));
+    }
+
+    // ── Scan / Rescan without a handle ────────────────────────────────────
+
+    #[test]
+    fn scan_without_attach_returns_error() {
+        let (tx, rx) = spawn_worker();
+        tx.send(WorkerCmd::Scan(vec![0x01, 0x02, 0x03, 0x04])).unwrap();
+        assert!(matches!(recv(&rx), WorkerResult::ScanError(_)));
+    }
+
+    #[test]
+    fn rescan_without_attach_returns_error() {
+        let (tx, rx) = spawn_worker();
+        tx.send(WorkerCmd::Rescan(vec![0x01, 0x02, 0x03, 0x04])).unwrap();
+        assert!(matches!(recv(&rx), WorkerResult::ScanError(_)));
+    }
+
+    // ── Pin management (no crash contract) ───────────────────────────────
+    // These commands produce no response; we verify the worker stays alive
+    // after receiving them by successfully sending another command after.
+
+    #[test]
+    fn pin_add_remove_toggle_do_not_crash() {
+        let (tx, rx) = spawn_worker();
+
+        let pin = Pin { id: 1, address: 0x1000, width: 4, value: vec![0; 4], enabled: true };
+        tx.send(WorkerCmd::PinAdd(pin)).unwrap();
+        tx.send(WorkerCmd::PinToggle(1)).unwrap();
+        tx.send(WorkerCmd::PinRemove(1)).unwrap();
+
+        // Worker is still alive: a subsequent Scan returns ScanError, not a channel error.
+        tx.send(WorkerCmd::Scan(vec![0; 4])).unwrap();
+        assert!(matches!(recv(&rx), WorkerResult::ScanError(_)));
+    }
+
+    #[test]
+    fn pin_toggle_unknown_id_does_not_crash() {
+        let (tx, rx) = spawn_worker();
+        tx.send(WorkerCmd::PinToggle(9999)).unwrap();
+        tx.send(WorkerCmd::Scan(vec![0; 4])).unwrap();
+        assert!(matches!(recv(&rx), WorkerResult::ScanError(_)));
+    }
+
+    #[test]
+    fn pin_remove_unknown_id_does_not_crash() {
+        let (tx, rx) = spawn_worker();
+        tx.send(WorkerCmd::PinRemove(9999)).unwrap();
+        tx.send(WorkerCmd::Scan(vec![0; 4])).unwrap();
+        assert!(matches!(recv(&rx), WorkerResult::ScanError(_)));
+    }
+
+    // ── Channel disconnect shuts down worker ──────────────────────────────
+
+    #[test]
+    fn worker_exits_when_sender_dropped() {
+        let (cmd_tx, cmd_rx) = channel::<WorkerCmd>();
+        let (result_tx, result_rx) = channel::<WorkerResult>();
+        let handle = std::thread::spawn(move || run(cmd_rx, result_tx));
+        drop(cmd_tx); // disconnect
+        handle.join().expect("worker thread should exit cleanly");
+        // result_rx disconnected too — no panic expected
+        drop(result_rx);
+    }
+}
