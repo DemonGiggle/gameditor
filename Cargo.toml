@@ -1,0 +1,21 @@
+[package]
+name = "game-slave"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "game-slave"
+path = "src/main.rs"
+
+[dependencies]
+eframe = "0.29"
+egui = "0.29"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_Memory",
+    "Win32_System_Threading",
+] }
