@@ -1,4 +1,4 @@
-# Game Slave
+# Gameditor
 
 A Windows memory scanner with a graphical interface, built in Rust. Attach to a running process, scan its memory for values, narrow results with repeated scans, write new values, and freeze (pin) addresses so they stay at a desired value.
 
