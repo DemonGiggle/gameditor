@@ -117,11 +117,21 @@ impl App {
     fn add_pin(&mut self, c: &Candidate) {
         let id = self.next_pin_id;
         self.next_pin_id += 1;
+        // Use the write-value field if it contains a valid number, otherwise
+        // fall back to the candidate's last-scanned value.
+        let value = self
+            .write_value_str
+            .trim()
+            .parse::<u64>()
+            .ok()
+            .map(|v| encode_value(v, c.width))
+            .filter(|v| !v.is_empty())
+            .unwrap_or_else(|| c.value.clone());
         let pin = Pin {
             id,
             address: c.address,
             width: c.width,
-            value: c.value.clone(),
+            value,
             enabled: true,
         };
         self.pins.push(pin.clone());
