@@ -1195,7 +1195,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "game-slave"
+name = "gameditor"
 version = "0.1.0"
 dependencies = [
  "eframe",

@@ -49,7 +49,7 @@ rustup target add x86_64-pc-windows-gnu
 cargo build --release
 ```
 
-The executable will be at `target/release/game-slave.exe`.
+The executable will be at `target/release/gameditor.exe`.
 
 ### On Linux (cross-compile)
 
@@ -57,13 +57,13 @@ The executable will be at `target/release/game-slave.exe`.
 cargo build --release --target x86_64-pc-windows-gnu
 ```
 
-The executable will be at `target/x86_64-pc-windows-gnu/release/game-slave.exe`.
+The executable will be at `target/x86_64-pc-windows-gnu/release/gameditor.exe`.
 
 ## Running
 
 ```bash
 # On Windows, after building:
-.\target\release\game-slave.exe
+.\target\release\gameditor.exe
 ```
 
 The application opens a 1000x700 window. Select a process from the list, enter a value and byte width, then scan. Use rescan to filter results, write to change values, and pin to freeze them.
