@@ -4,17 +4,23 @@ mod app;
 mod memory;
 mod process;
 mod scanner;
+mod theme;
 mod types;
 mod worker;
 
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([1000.0, 700.0]),
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([1050.0, 740.0])
+            .with_min_inner_size([800.0, 500.0]),
         ..Default::default()
     };
     eframe::run_native(
-        "Memory Scanner",
+        "Game Editor",
         options,
-        Box::new(|_cc| Ok(Box::new(app::App::new()))),
+        Box::new(|cc| {
+            theme::apply(&cc.egui_ctx);
+            Ok(Box::new(app::App::new()))
+        }),
     )
 }
